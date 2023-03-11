@@ -28,7 +28,7 @@ type DB struct {
 }
 
 // Open a connection to the database.
-func Init(path string, buckets *[][]byte) (*DB, error) {
+func Init(path string, buckets *[]string) (*DB, error) {
 	var e error
 	var db DB
 
@@ -39,7 +39,7 @@ func Init(path string, buckets *[][]byte) (*DB, error) {
 
 	e = db.Update(func(tx *bolt.Tx) error {
 		for idx, bucket := range *buckets {
-			_, e := tx.CreateBucketIfNotExists(bucket)
+			_, e := tx.CreateBucketIfNotExists([]byte(bucket))
 
 			if e != nil {
 				return fmt.Errorf("bucket at index %d: %s", idx, e.Error())
@@ -78,30 +78,30 @@ func Decode[T any](obj *T, b []byte) error {
 }
 
 // Get a decoded value to `val` from the `bucket` by it's `key`.
-func Get[T any](db DB, bucket []byte, key []byte, val *T) error {
+func Get[T any](db *DB, bucket string, key []byte, val *T) error {
 	return db.View(func(tx *bolt.Tx) error {
-		return Decode(val, tx.Bucket(bucket).Get(key))
+		return Decode(val, tx.Bucket([]byte(bucket)).Get(key))
 	})
 }
 
 // Insert a new `key: val` pair to the specified bucket, or overwrite the value in case the key already exists.
-func Insert[T any](db DB, bucket []byte, key []byte, val *T) error {
+func Insert[T any](db *DB, bucket string, key []byte, val *T) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		buf, e := Serialise(val)
 		if e != nil {
 			return e
 		}
 
-		return tx.Bucket(bucket).Put(key, buf.Bytes())
+		return tx.Bucket([]byte(bucket)).Put(key, buf.Bytes())
 	})
 }
 
 // Update() first validates that `key` exists inside the `bucket`, then overwrites the value by `val`.
 // If given key doesn't exist, the function returns ErrKeyNotFound without modifying the database.
 // If you want to update or insert a value whenever the key exists or not, use Insert().
-func Update[T any](db DB, bucket []byte, key []byte, val *T) error {
+func Update[T any](db *DB, bucket string, key []byte, val *T) error {
 	return db.Update(func(tx *bolt.Tx) error {
-		buc := tx.Bucket(bucket)
+		buc := tx.Bucket([]byte(bucket))
 
 		exists := buc.Get(key)
 		if exists == nil {
@@ -118,9 +118,9 @@ func Update[T any](db DB, bucket []byte, key []byte, val *T) error {
 }
 
 // Create a new bucket. Returns an error if the bucket already exists, if the bucket name is blank, or if the bucket name is too long.
-func NewBucket(db DB, bucket []byte) error {
+func NewBucket(db *DB, bucket string) error {
 	return db.Update(func(tx *bolt.Tx) error {
-		_, e := tx.CreateBucket(bucket)
+		_, e := tx.CreateBucket([]byte(bucket))
 		return e
 	})
 }
