@@ -23,12 +23,13 @@ type DB struct {
 }
 
 // Open a connection to the database
-func Init(db DB, path string, buckets *[][]byte) error {
+func Init(path string, buckets *[][]byte) (*DB, error) {
 	var e error
+	var db DB
 
 	db.DB, e = bolt.Open(path, 0600, nil)
 	if e != nil {
-		return e
+		return nil, e
 	}
 
 	for idx, bucket := range *buckets {
@@ -38,11 +39,11 @@ func Init(db DB, path string, buckets *[][]byte) error {
 		})
 
 		if e != nil {
-			return fmt.Errorf("bucket at index %d: %s", idx, e.Error())
+			return nil, fmt.Errorf("bucket at index %d: %s", idx, e.Error())
 		}
 	}
 
-	return nil
+	return &db, nil
 }
 
 // serialise obj into the provided buffer
