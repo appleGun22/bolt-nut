@@ -13,16 +13,21 @@ package boltnut
 import (
 	"bytes"
 	"encoding/gob"
+	"errors"
 	"fmt"
 
 	bolt "go.etcd.io/bbolt"
+)
+
+var (
+	ErrKeyNotFound = errors.New("key doesn't exist")
 )
 
 type DB struct {
 	*bolt.DB
 }
 
-// Open a connection to the database
+// Open a connection to the database.
 func Init(path string, buckets *[][]byte) (*DB, error) {
 	var e error
 	var db DB
@@ -46,16 +51,18 @@ func Init(path string, buckets *[][]byte) (*DB, error) {
 	return &db, nil
 }
 
-// serialise obj into the provided buffer
-func Serialise[T any](obj *T, buf *bytes.Buffer) error {
-	enc := gob.NewEncoder(buf)
+// serialise obj into a buffer.
+func Serialise[T any](obj *T) (*bytes.Buffer, error) {
+	var buf bytes.Buffer
+
+	enc := gob.NewEncoder(&buf)
 
 	e := enc.Encode((*obj))
 
-	return e
+	return &buf, e
 }
 
-// decode the byte array into obj
+// decode the byte array into obj.
 func Decode[T any](obj *T, b []byte) error {
 	buf := bytes.NewBuffer(b)
 
@@ -66,20 +73,17 @@ func Decode[T any](obj *T, b []byte) error {
 	return e
 }
 
-// Get a decoded value to `val` from the `bucket` by it's `key`
+// Get a decoded value to `val` from the `bucket` by it's `key`.
 func Get[T any](db DB, bucket []byte, key []byte, val *T) error {
 	return db.View(func(tx *bolt.Tx) error {
 		return Decode(val, tx.Bucket(bucket).Get(key))
 	})
 }
 
-// Insert a new `key: val` pair to the specified bucket.
-// If given key exists, the value gets overwritten
+// Insert a new `key: val` pair to the specified bucket, or overwrite the value in case the key already exists.
 func Insert[T any](db DB, bucket []byte, key []byte, val *T) error {
 	return db.Update(func(tx *bolt.Tx) error {
-		var buf bytes.Buffer
-
-		e := Serialise(val, &buf)
+		buf, e := Serialise(val)
 		if e != nil {
 			return e
 		}
@@ -89,12 +93,10 @@ func Insert[T any](db DB, bucket []byte, key []byte, val *T) error {
 }
 
 // Update() first validates that `key` exists inside the `bucket`, then overwrites the value by `val`.
-// If given key doesn't exist, the function returns nil without modifying the database.
+// If given key doesn't exist, the function returns ErrKeyNotFound without modifying the database.
 // If you want to update or insert a value whenever the key exists or not, use Insert().
 func Update[T any](db DB, bucket []byte, key []byte, val *T) error {
 	return db.Update(func(tx *bolt.Tx) error {
-		var buf bytes.Buffer
-
 		buc := tx.Bucket(bucket)
 
 		exists := buc.Get(key)
@@ -102,7 +104,7 @@ func Update[T any](db DB, bucket []byte, key []byte, val *T) error {
 			return nil
 		}
 
-		e := Serialise(val, &buf)
+		buf, e := Serialise(val)
 		if e != nil {
 			return e
 		}
