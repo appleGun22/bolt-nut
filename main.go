@@ -25,7 +25,7 @@ var (
 )
 
 type DB struct {
-	*bolt.DB
+	bolt_db *bolt.DB
 }
 
 type Tx struct {
@@ -41,12 +41,12 @@ func Init(path string, buckets *[]string) (*DB, error) {
 	var e error
 	var db DB
 
-	db.DB, e = bolt.Open(path, 0600, nil)
+	db.bolt_db, e = bolt.Open(path, 0600, nil)
 	if e != nil {
 		return nil, e
 	}
 
-	e = db.Update(func(tx *bolt.Tx) error {
+	e = db.bolt_db.Update(func(tx *bolt.Tx) error {
 		for idx, bucket := range *buckets {
 			_, e := tx.CreateBucketIfNotExists([]byte(bucket))
 
@@ -89,7 +89,7 @@ func Decode[T any](obj *T, b []byte) error {
 
 // Create a new bucket. Returns an error if the bucket already exists, if the bucket name is blank, or if the bucket name is too long.
 func NewBucket(db *DB, bucket string) error {
-	return db.Update(func(tx *bolt.Tx) error {
+	return db.bolt_db.Update(func(tx *bolt.Tx) error {
 		_, e := tx.CreateBucket([]byte(bucket))
 		return e
 	})
@@ -101,14 +101,14 @@ func NewBucket(db *DB, bucket string) error {
 //
 // * Read transactions are faster for read only use cases.
 func (db *DB) ReadTx(fn func(*Tx) error) error {
-	return db.View(func(btx *bolt.Tx) error {
+	return db.bolt_db.View(func(btx *bolt.Tx) error {
 		return fn(NewTx(btx))
 	})
 }
 
 // Create a read-write transaction. Allows to retrieve values and modify the database. If you need only to retrieve values, use ReadTx() instead.
 func (db *DB) WriteTx(fn func(*Tx) error) error {
-	return db.Update(func(btx *bolt.Tx) error {
+	return db.bolt_db.Update(func(btx *bolt.Tx) error {
 		return fn(NewTx(btx))
 	})
 }
