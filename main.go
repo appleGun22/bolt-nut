@@ -37,15 +37,19 @@ func Init(path string, buckets *[][]byte) (*DB, error) {
 		return nil, e
 	}
 
-	for idx, bucket := range *buckets {
-		e := db.Update(func(tx *bolt.Tx) error {
-			_, e := tx.CreateBucket(bucket)
-			return e
-		})
+	e = db.Update(func(tx *bolt.Tx) error {
+		for idx, bucket := range *buckets {
+			_, e := tx.CreateBucketIfNotExists(bucket)
 
-		if e != nil {
-			return nil, fmt.Errorf("bucket at index %d: %s", idx, e.Error())
+			if e != nil {
+				return fmt.Errorf("bucket at index %d: %s", idx, e.Error())
+			}
 		}
+		return nil
+	})
+
+	if e != nil {
+		return nil, e
 	}
 
 	return &db, nil
@@ -110,5 +114,13 @@ func Update[T any](db DB, bucket []byte, key []byte, val *T) error {
 		}
 
 		return buc.Put(key, buf.Bytes())
+	})
+}
+
+// Create a new bucket. Returns an error if the bucket already exists, if the bucket name is blank, or if the bucket name is too long.
+func NewBucket(db DB, bucket []byte) error {
+	return db.Update(func(tx *bolt.Tx) error {
+		_, e := tx.CreateBucket(bucket)
+		return e
 	})
 }
