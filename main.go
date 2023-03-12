@@ -140,7 +140,7 @@ func (b *bucket[V]) Delete(key []byte) error {
 
 // Execute provided function for every `key: val` pair that exist inside the bucket.
 //
-// DO NOT MODIFY THE BUCKET! this will cause undefined behavior.
+// DO NOT MODIFY THE BUCKET while ForEach is working! this will cause undefined behavior.
 func (b *bucket[V]) ForEach(fn func(k []byte, v *V) error) error {
 	return b.bolt_bucket.ForEach(func(k, v []byte) error {
 		var val V
