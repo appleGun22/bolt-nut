@@ -66,7 +66,7 @@ func Init(path string, buckets *[]string) (*DB, error) {
 	return &db, nil
 }
 
-// serialise obj into a buffer.
+// Serialise obj into a buffer.
 func serialise[T any](obj *T) (*bytes.Buffer, error) {
 	var buf bytes.Buffer
 
@@ -77,8 +77,8 @@ func serialise[T any](obj *T) (*bytes.Buffer, error) {
 	return &buf, e
 }
 
-// decode the byte array into obj.
-func decode[T any](obj *T, b []byte) error {
+// Decode the byte array into obj.
+func Decode[T any](obj *T, b []byte) error {
 	if b == nil {
 		return ErrKeyNotFound
 	}
@@ -120,7 +120,7 @@ func (db *DB) WriteTx(fn func(*TX) error) error {
 
 // Load the value into `val`.
 func (b *bucket[V]) Get(key []byte, val *V) error {
-	return decode(val, b.bolt_bucket.Get(key))
+	return Decode(val, b.bolt_bucket.Get(key))
 }
 
 // Insert a new `key: val` pair to the specified bucket, or overwrite the value in case the key already exists.
