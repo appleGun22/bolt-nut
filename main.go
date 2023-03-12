@@ -118,7 +118,7 @@ func (db *DB) WriteTx(fn func(*TX) error) error {
 	})
 }
 
-// Load the value into `val`.
+// Load the value into `val`. Returns ErrKeyNotFound when given key doesn't exist.
 func (b *bucket[V]) Get(key []byte, val *V) error {
 	return Decode(val, b.bolt_bucket.Get(key))
 }
@@ -131,6 +131,11 @@ func (b *bucket[V]) Insert(key []byte, val *V) error {
 	}
 
 	return b.bolt_bucket.Put(key, buf.Bytes())
+}
+
+// Delete the `key: val` pair that belongs to the provided key.
+func (b *bucket[V]) Delete(key []byte) error {
+	return b.bolt_bucket.Delete(key)
 }
 
 // Execute provided function for every `key: val` pair that exist inside the bucket.
@@ -153,18 +158,8 @@ func newTx(tx *bolt.Tx) *TX {
 	}
 }
 
-type upto32 interface {
-	int8 | int16 | int32 | uint8 | uint16 | uint32 | int
-}
-
-// Be aware, `int` is usually equivalent to `int64` on 64-bit machines.
-func Int32_to_bytes[v upto32](k v) []byte {
-	b := make([]byte, 4)
-	binary.LittleEndian.PutUint32(b, uint32(k))
-	return b
-}
-
-func Int64_to_bytes[v upto32 | int64 | uint64](k v) []byte {
+// Convert any integer to bytes. Used to create keys from integers.
+func Itob[INT int | int8 | int16 | int32 | uint8 | uint16 | uint32 | int64 | uint64](k INT) []byte {
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, uint64(k))
 	return b
