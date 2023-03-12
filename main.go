@@ -67,7 +67,7 @@ func Init(path string, buckets *[]string) (*DB, error) {
 }
 
 // serialise obj into a buffer.
-func Serialise[T any](obj *T) (*bytes.Buffer, error) {
+func serialise[T any](obj *T) (*bytes.Buffer, error) {
 	var buf bytes.Buffer
 
 	enc := gob.NewEncoder(&buf)
@@ -78,7 +78,11 @@ func Serialise[T any](obj *T) (*bytes.Buffer, error) {
 }
 
 // decode the byte array into obj.
-func Decode[T any](obj *T, b []byte) error {
+func decode[T any](obj *T, b []byte) error {
+	if b == nil {
+		return ErrKeyNotFound
+	}
+
 	buf := bytes.NewBuffer(b)
 
 	dec := gob.NewDecoder(buf)
@@ -116,12 +120,12 @@ func (db *DB) WriteTx(fn func(*TX) error) error {
 
 // Load the value into `val`.
 func (b *bucket[V]) Get(key []byte, val *V) error {
-	return Decode(val, b.bolt_bucket.Get(key))
+	return decode(val, b.bolt_bucket.Get(key))
 }
 
 // Insert a new `key: val` pair to the specified bucket, or overwrite the value in case the key already exists.
 func (b *bucket[V]) Insert(key []byte, val *V) error {
-	buf, e := Serialise(val)
+	buf, e := serialise(val)
 	if e != nil {
 		return e
 	}
@@ -129,24 +133,9 @@ func (b *bucket[V]) Insert(key []byte, val *V) error {
 	return b.bolt_bucket.Put(key, buf.Bytes())
 }
 
-// Update() first validates that `key` exists inside the bucket, then overwrites the value by `val`.
-// If given key doesn't exist, the function returns ErrKeyNotFound without modifying the database.
-// If you want to update or insert a value whenever the key exists or not, use Insert().
-func (b *bucket[V]) Update(key []byte, val *V) error {
-	exists := b.bolt_bucket.Get(key)
-	if exists == nil {
-		return ErrKeyNotFound
-	}
-
-	buf, e := Serialise(val)
-	if e != nil {
-		return e
-	}
-
-	return b.bolt_bucket.Put(key, buf.Bytes())
-}
-
-// Execute provided function for every `key: val` pair that exist inside the bucket. Do not modify the bucket! , this will cause undefined behavior.
+// Execute provided function for every `key: val` pair that exist inside the bucket.
+//
+// DO NOT MODIFY THE BUCKET! this will cause undefined behavior.
 func (b *bucket[V]) ForEach(fn func(k []byte, v []byte) error) error {
 	return b.bolt_bucket.ForEach(fn)
 }
