@@ -24,11 +24,11 @@ var (
 	ErrKeyNotFound = errors.New("key doesn't exist")
 )
 
-type db struct {
+type DB struct {
 	bolt_db *bolt.DB
 }
 
-type tx struct {
+type TX struct {
 	bolt_tx *bolt.Tx
 }
 
@@ -37,9 +37,9 @@ type bucket[V any] struct {
 }
 
 // Open a connection to the database.
-func Init(path string, buckets *[]string) (*db, error) {
+func Init(path string, buckets *[]string) (*DB, error) {
 	var e error
-	var db db
+	var db DB
 
 	db.bolt_db, e = bolt.Open(path, 0600, nil)
 	if e != nil {
@@ -88,7 +88,7 @@ func Decode[T any](obj *T, b []byte) error {
 }
 
 // Create a new bucket. Returns an error if the bucket already exists, if the bucket name is blank, or if the bucket name is too long.
-func NewBucket(db *db, bucket string) error {
+func NewBucket(db *DB, bucket string) error {
 	return db.bolt_db.Update(func(tx *bolt.Tx) error {
 		_, e := tx.CreateBucket([]byte(bucket))
 		return e
@@ -100,14 +100,14 @@ func NewBucket(db *db, bucket string) error {
 // * ReadTx() ensures nothing will be modified, and in case of an attempt to modify, an error will be returned.
 //
 // * Read transactions are faster for read only use cases.
-func (db *db) ReadTx(fn func(*tx) error) error {
+func (db *DB) ReadTx(fn func(*TX) error) error {
 	return db.bolt_db.View(func(btx *bolt.Tx) error {
 		return fn(NewTx(btx))
 	})
 }
 
 // Create a read-write transaction. Allows to retrieve values and modify the database. If you need only to retrieve values, use ReadTx() instead.
-func (db *db) WriteTx(fn func(*tx) error) error {
+func (db *DB) WriteTx(fn func(*TX) error) error {
 	return db.bolt_db.Update(func(btx *bolt.Tx) error {
 		return fn(NewTx(btx))
 	})
@@ -151,14 +151,14 @@ func (b *bucket[V]) ForEach(fn func(k []byte, v []byte) error) error {
 }
 
 // Access an existing bucket within a transaction. Returns nil if bucket doesn't exist.
-func Bucket[V any](tx *tx, name string) *bucket[V] {
+func Bucket[V any](tx *TX, name string) *bucket[V] {
 	return &bucket[V]{
 		bolt_bucket: tx.bolt_tx.Bucket([]byte(name)),
 	}
 }
 
-func NewTx(btx *bolt.Tx) *tx {
-	return &tx{
-		bolt_tx: btx,
+func NewTx(tx *bolt.Tx) *TX {
+	return &TX{
+		bolt_tx: tx,
 	}
 }
