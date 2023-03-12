@@ -141,8 +141,17 @@ func (b *bucket[V]) Delete(key []byte) error {
 // Execute provided function for every `key: val` pair that exist inside the bucket.
 //
 // DO NOT MODIFY THE BUCKET! this will cause undefined behavior.
-func (b *bucket[V]) ForEach(fn func(k []byte, v []byte) error) error {
-	return b.bolt_bucket.ForEach(fn)
+func (b *bucket[V]) ForEach(fn func(k []byte, v *V) error) error {
+	return b.bolt_bucket.ForEach(func(k, v []byte) error {
+		var val V
+
+		e := Decode(&val, v)
+		if e != nil {
+			return e
+		}
+
+		return fn(k, &val)
+	})
 }
 
 // Access an existing bucket within a transaction. Returns nil if bucket doesn't exist.
