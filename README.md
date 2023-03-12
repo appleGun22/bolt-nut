@@ -3,11 +3,11 @@ A minimalistic wrapper for the [bbolt](https://github.com/etcd-io/bbolt) package
 
 
 ### Example file
-In this example, it is shown hot to:
+In this example, it is shown how to:
 * Setup your database
-* Insert items to the database
-* Update items in the database
-* Iterate through Buckets 
+* Insert items to a database Bucket
+* Update items in a database Bucket
+* Iterate through Buckets elements
 ``` go
 package main
 
