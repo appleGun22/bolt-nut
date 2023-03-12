@@ -102,14 +102,14 @@ func NewBucket(db *DB, bucket string) error {
 // * Read transactions are faster for read only use cases.
 func (db *DB) ReadTx(fn func(*TX) error) error {
 	return db.bolt_db.View(func(btx *bolt.Tx) error {
-		return fn(NewTx(btx))
+		return fn(newTx(btx))
 	})
 }
 
 // Create a read-write transaction. Allows to retrieve values and modify the database. If you need only to retrieve values, use ReadTx() instead.
 func (db *DB) WriteTx(fn func(*TX) error) error {
 	return db.bolt_db.Update(func(btx *bolt.Tx) error {
-		return fn(NewTx(btx))
+		return fn(newTx(btx))
 	})
 }
 
@@ -157,7 +157,7 @@ func Bucket[V any](tx *TX, name string) *bucket[V] {
 	}
 }
 
-func NewTx(tx *bolt.Tx) *TX {
+func newTx(tx *bolt.Tx) *TX {
 	return &TX{
 		bolt_tx: tx,
 	}
