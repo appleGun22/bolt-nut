@@ -24,22 +24,22 @@ var (
 	ErrKeyNotFound = errors.New("key doesn't exist")
 )
 
-type DB struct {
+type db struct {
 	bolt_db *bolt.DB
 }
 
-type TX struct {
+type tx struct {
 	bolt_tx *bolt.Tx
 }
 
-type BUCKET[V any] struct {
+type bucket[V any] struct {
 	bolt_bucket *bolt.Bucket
 }
 
 // Open a connection to the database.
-func Init(path string, buckets *[]string) (*DB, error) {
+func Init(path string, buckets *[]string) (*db, error) {
 	var e error
-	var db DB
+	var db db
 
 	db.bolt_db, e = bolt.Open(path, 0600, nil)
 	if e != nil {
@@ -88,7 +88,7 @@ func Decode[T any](obj *T, b []byte) error {
 }
 
 // Create a new bucket. Returns an error if the bucket already exists, if the bucket name is blank, or if the bucket name is too long.
-func NewBucket(db *DB, bucket string) error {
+func NewBucket(db *db, bucket string) error {
 	return db.bolt_db.Update(func(tx *bolt.Tx) error {
 		_, e := tx.CreateBucket([]byte(bucket))
 		return e
@@ -100,26 +100,26 @@ func NewBucket(db *DB, bucket string) error {
 // * ReadTx() ensures nothing will be modified, and in case of an attempt to modify, an error will be returned.
 //
 // * Read transactions are faster for read only use cases.
-func (db *DB) ReadTx(fn func(*TX) error) error {
+func (db *db) ReadTx(fn func(*tx) error) error {
 	return db.bolt_db.View(func(btx *bolt.Tx) error {
 		return fn(NewTx(btx))
 	})
 }
 
 // Create a read-write transaction. Allows to retrieve values and modify the database. If you need only to retrieve values, use ReadTx() instead.
-func (db *DB) WriteTx(fn func(*TX) error) error {
+func (db *db) WriteTx(fn func(*tx) error) error {
 	return db.bolt_db.Update(func(btx *bolt.Tx) error {
 		return fn(NewTx(btx))
 	})
 }
 
 // Load the value into `val`.
-func (b *BUCKET[V]) Get(key []byte, val *V) error {
+func (b *bucket[V]) Get(key []byte, val *V) error {
 	return Decode(val, b.bolt_bucket.Get(key))
 }
 
 // Insert a new `key: val` pair to the specified bucket, or overwrite the value in case the key already exists.
-func (b *BUCKET[V]) Insert(key []byte, val *V) error {
+func (b *bucket[V]) Insert(key []byte, val *V) error {
 	buf, e := Serialise(val)
 	if e != nil {
 		return e
@@ -131,7 +131,7 @@ func (b *BUCKET[V]) Insert(key []byte, val *V) error {
 // Update() first validates that `key` exists inside the bucket, then overwrites the value by `val`.
 // If given key doesn't exist, the function returns ErrKeyNotFound without modifying the database.
 // If you want to update or insert a value whenever the key exists or not, use Insert().
-func (b *BUCKET[V]) Update(key []byte, val *V) error {
+func (b *bucket[V]) Update(key []byte, val *V) error {
 	exists := b.bolt_bucket.Get(key)
 	if exists == nil {
 		return ErrKeyNotFound
@@ -146,19 +146,19 @@ func (b *BUCKET[V]) Update(key []byte, val *V) error {
 }
 
 // Execute provided function for every `key: val` pair that exist inside the bucket. Do not modify the bucket! , this will cause undefined behavior.
-func (b *BUCKET[V]) ForEach(fn func(k []byte, v []byte) error) error {
+func (b *bucket[V]) ForEach(fn func(k []byte, v []byte) error) error {
 	return b.bolt_bucket.ForEach(fn)
 }
 
 // Access an existing bucket within a transaction. Returns nil if bucket doesn't exist.
-func Bucket[V any](tx *TX, name string) *BUCKET[V] {
-	return &BUCKET[V]{
+func Bucket[V any](tx *tx, name string) *bucket[V] {
+	return &bucket[V]{
 		bolt_bucket: tx.bolt_tx.Bucket([]byte(name)),
 	}
 }
 
-func NewTx(tx *bolt.Tx) *TX {
-	return &TX{
-		bolt_tx: tx,
+func NewTx(btx *bolt.Tx) *tx {
+	return &tx{
+		bolt_tx: btx,
 	}
 }
