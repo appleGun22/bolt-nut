@@ -3,7 +3,7 @@ The wrapper initially was planned to be implemented with an interface + struct s
 but Go generics are terrible even in 1.20 and do not support generics in their methods,
 so this package got partialy implemented in a C style.
 
-Buckets(tables) should be predefined. Ideally Buckets should be referred to via Constants.
+Buckets(tables) should be predefined. But it's allowed to create new buckets later on.
 Nested Buckets are not allowed. If you need that functionallity use bbolt directly instead.
 
 enjoy :)
@@ -13,6 +13,7 @@ package boltnut
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/gob"
 	"errors"
 	"fmt"
@@ -161,4 +162,20 @@ func newTx(tx *bolt.Tx) *TX {
 	return &TX{
 		bolt_tx: tx,
 	}
+}
+
+type upto32 interface {
+	int8 | int16 | int32 | uint8 | uint16 | uint32
+}
+
+func Int32_to_bytes[v upto32](k v) []byte {
+	b := make([]byte, 4)
+	binary.LittleEndian.PutUint32(b, uint32(k))
+	return b
+}
+
+func Int64_to_bytes[v upto32 | int64 | uint64](k v) []byte {
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, uint64(k))
+	return b
 }
