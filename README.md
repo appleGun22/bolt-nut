@@ -17,7 +17,7 @@ import (
 	boltnut "github.com/appleGun22/bolt-nut"
 )
 
-// Imporatant to CAPITALIZE the first letter of structures and its fields !!!
+// Important to CAPITALIZE the first letter of structures and its fields !!!
 type Banana struct {
 	Owner string
 	Ripe  bool
@@ -118,6 +118,7 @@ func main() {
 			var v Banana
 			k := boltnut.Itob(i)
 
+			// Get the Value
 			e := bananas.Get(k, &v)
 			if e == boltnut.ErrKeyNotFound {
 				break
@@ -125,8 +126,10 @@ func main() {
 				return e
 			}
 
+			// Update what we need
 			v.Ripe = true
 
+			// Insert it back to the databse
 			e = bananas.Insert(k, &v)
 			if e != nil {
 				return e
