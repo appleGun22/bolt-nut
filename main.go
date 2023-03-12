@@ -165,9 +165,10 @@ func newTx(tx *bolt.Tx) *TX {
 }
 
 type upto32 interface {
-	int8 | int16 | int32 | uint8 | uint16 | uint32
+	int8 | int16 | int32 | uint8 | uint16 | uint32 | int
 }
 
+// Be aware, `int` is usually equivalent to `int64` on 64-bit machines.
 func Int32_to_bytes[v upto32](k v) []byte {
 	b := make([]byte, 4)
 	binary.LittleEndian.PutUint32(b, uint32(k))
