@@ -66,6 +66,11 @@ func Init(path string, buckets *[]string) (*DB, error) {
 	return &db, nil
 }
 
+// Close database. It will block waiting for any open transactions to finish before closing the database and returning.
+func (db *DB) Close() error {
+	return db.bolt_db.Close()
+}
+
 // Serialise obj into a buffer.
 func serialise[T any](obj *T) (*bytes.Buffer, error) {
 	var buf bytes.Buffer

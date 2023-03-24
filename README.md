@@ -47,6 +47,7 @@ func setup_db() *boltnut.DB {
 
 func main() {
 	db := setup_db()
+	defer db.Close()
 
 	/* --- INSERT --- */
 
