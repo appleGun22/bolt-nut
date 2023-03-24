@@ -135,16 +135,16 @@ func (b *bucket[V]) Insert(key []byte, val *V) error {
 
 // Get the value ,perform a function on it, then insert it back with the changes applied. Returns ErrKeyNotFound when given key doesn't exist.
 func (b *bucket[V]) Update(key []byte, fn func(*V)) error {
-	var v V
+	var vtemp V
 
-	e := b.Get(key, &v)
+	e := b.Get(key, &vtemp)
 	if e != nil {
 		return e
 	}
 
-	fn(&v)
+	fn(&vtemp)
 
-	e = b.Insert(key, &v)
+	e = b.Insert(key, &vtemp)
 	if e != nil {
 		return e
 	}
@@ -162,14 +162,14 @@ func (b *bucket[V]) Delete(key []byte) error {
 // DO NOT MODIFY THE BUCKET while ForEach is working! this will cause undefined behavior.
 func (b *bucket[V]) ForEach(fn func(k []byte, v *V) error) error {
 	return b.bolt_bucket.ForEach(func(k, v []byte) error {
-		var val V
+		var vtemp V
 
-		e := Decode(&val, v)
+		e := Decode(&vtemp, v)
 		if e != nil {
 			return e
 		}
 
-		return fn(k, &val)
+		return fn(k, &vtemp)
 	})
 }
 
