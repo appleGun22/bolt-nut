@@ -133,6 +133,25 @@ func (b *bucket[V]) Insert(key []byte, val *V) error {
 	return b.bolt_bucket.Put(key, buf.Bytes())
 }
 
+// Get the value ,perform a function on it, then insert it back with the changes applied. Returns ErrKeyNotFound when given key doesn't exist.
+func (b *bucket[V]) Update(key []byte, fn func(*V)) error {
+	var v V
+
+	e := b.Get(key, &v)
+	if e != nil {
+		return e
+	}
+
+	fn(&v)
+
+	e = b.Insert(key, &v)
+	if e != nil {
+		return e
+	}
+
+	return nil
+}
+
 // Delete the `key: val` pair that belongs to the provided key.
 func (b *bucket[V]) Delete(key []byte) error {
 	return b.bolt_bucket.Delete(key)
