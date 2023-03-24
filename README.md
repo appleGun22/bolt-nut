@@ -115,10 +115,9 @@ func main() {
 
 		// We previously created N bananas , we will iterate until not found
 		for i := 0; ; i++ {
-			var v Banana
 			k := boltnut.Itob(i)
 
-			e := bananas.Update(k, func(v *Monkey) {
+			e := bananas.Update(k, func(v *Banana) {
 				v.Ripe = true
 			})
 
@@ -134,7 +133,6 @@ func main() {
 
 		monkey_names := []string{"moka", "pat", "robert"}
 		for i := range monkey_names {
-			var v Monkey
 			k := []byte(monkey_names[i])
 
 			e := monkeys.Update(k, func(v *Monkey) {
